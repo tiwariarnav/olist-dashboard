@@ -6,7 +6,7 @@ An interactive Streamlit dashboard analyzing ~99K orders from the [Olist Brazili
 
 Supporting angles covered in the dashboard: payment behavior (method + installments), order density and revenue by state, and the on-time vs. late delivery trend over time.
 
-**Live demo →** *(add your Streamlit Community Cloud URL here after deploying — see [Deployment](#deployment))*
+**[Live demo →](https://olist-delivery-analytics.streamlit.app)**
 
 <!-- ![Dashboard screenshot](docs/screenshot-overview.png) -->
 *(screenshots to be added — see the live demo link above in the meantime)*
