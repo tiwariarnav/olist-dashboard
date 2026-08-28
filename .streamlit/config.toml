@@ -1,0 +1,12 @@
+# Streamlit native theme settings.
+# primaryColor drives widget accents (multiselect chips, active tab underline,
+# slider handle, checked checkboxes, etc.) — set to match the "late/critical"
+# red already used throughout the dashboard's charts (see COLOR_CRITICAL in
+# src/app.py), so the sidebar state-filter chips don't clash with the app's
+# own status-color palette.
+#
+# backgroundColor/textColor/etc. are intentionally left unset so Streamlit's
+# native light/dark mode switching (and this app's own "Chart theme" override)
+# keep working as-is.
+[theme]
+primaryColor = "#d03b3b"
