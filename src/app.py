@@ -42,16 +42,23 @@ ORDINAL_BLUES_MAP = {
 st.set_page_config(page_title="Olist Delivery & Review Analytics", layout="wide")
 
 
-def style_fig(fig, title: str | None = None):
-    """Shared, minimal chart chrome: light template, muted grid, clean margins."""
+def style_fig(fig, title: str | None = None, bar_radius: bool = False):
+    """Shared chart chrome tuned for Streamlit's dark theme: transparent
+    background so charts blend into the page instead of sitting in a
+    mismatched light card, soft muted gridlines instead of harsh default
+    ones, and (optionally) rounded bar corners for a less "sharp" look."""
     fig.update_layout(
-        template="plotly_white",
-        font=dict(color="#52514e", size=13),
-        title=dict(text=title, font=dict(color="#0b0b0b", size=16)) if title else None,
-        margin=dict(l=40, r=20, t=50 if title else 20, b=40),
-        xaxis=dict(gridcolor="#e1e0d9", zerolinecolor="#c3c2b7"),
-        yaxis=dict(gridcolor="#e1e0d9", zerolinecolor="#c3c2b7"),
+        paper_bgcolor="rgba(0,0,0,0)",
+        plot_bgcolor="rgba(0,0,0,0)",
+        font=dict(color="#c3c2b7", size=13, family="system-ui, -apple-system, 'Segoe UI', sans-serif"),
+        title=dict(text=title, font=dict(color="#ffffff", size=16)) if title else None,
+        margin=dict(l=40, r=20, t=55 if title else 20, b=40),
+        hoverlabel=dict(bgcolor="#22221f", font_color="#ffffff", bordercolor="#3a3a37"),
+        xaxis=dict(gridcolor="#2c2c2a", zerolinecolor="#3a3a37", linecolor="#3a3a37", showline=True),
+        yaxis=dict(gridcolor="#2c2c2a", zerolinecolor="#3a3a37", linecolor="#3a3a37", showline=True),
     )
+    if bar_radius:
+        fig.update_traces(marker_cornerradius=4, selector=dict(type="bar"))
     return fig
 
 
@@ -158,13 +165,19 @@ with col_a:
         category_orders={"review_score": ["1", "2", "3", "4", "5"]},
         labels={"review_score": "Review score", "delivery_delay_days": "Delivery delay (days)"},
     )
-    fig_box.add_hline(y=0, line_dash="dot", line_color=MUTED)
-    fig_box.update_layout(showlegend=False)
+    fig_box.update_traces(
+        fillcolor="rgba(42, 120, 214, 0.35)",
+        line=dict(color=COLOR_BLUE, width=1.5),
+        marker=dict(color=COLOR_BLUE),
+    )
+    fig_box.add_hline(y=0, line_dash="dot", line_width=1, line_color=MUTED)
+    fig_box.update_layout(showlegend=False, yaxis_range=[-45, 45])
     style_fig(fig_box, "Delivery delay by review score")
-    st.plotly_chart(fig_box, use_container_width=True)
+    st.plotly_chart(fig_box, use_container_width=True, theme=None)
     st.caption(
         "Dotted line = delivered exactly on the estimated date. Late orders "
-        "(above the line) skew sharply toward lower review scores."
+        "(above the line) skew sharply toward lower review scores. Cropped to "
+        "±45 days for readability — a small number of extreme outliers fall outside this range."
     )
 
 with col_b:
@@ -181,8 +194,8 @@ with col_b:
     )
     fig_repeat.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
     fig_repeat.update_layout(showlegend=False, yaxis_range=[0, repeat_by_delivery["repeat_rate_pct"].max() * 1.3])
-    style_fig(fig_repeat, "Repeat purchase rate by first-delivery outcome")
-    st.plotly_chart(fig_repeat, use_container_width=True)
+    style_fig(fig_repeat, "Repeat purchase rate by first-delivery outcome", bar_radius=True)
+    st.plotly_chart(fig_repeat, use_container_width=True, theme=None)
     st.caption("Segmented by whether a customer's first delivered order arrived on-time or late.")
 
 st.divider()
@@ -198,9 +211,13 @@ fig_trend = px.line(
     color_discrete_sequence=[COLOR_CRITICAL],
     labels={"order_year_month": "Month", "pct_late": "Late deliveries (%)"},
 )
+fig_trend.update_traces(
+    line=dict(shape="spline", smoothing=0.6, width=2.5),
+    marker=dict(size=7, line=dict(width=1, color="#1a1a19")),
+)
 fig_trend.update_layout(xaxis_tickangle=-45)
 style_fig(fig_trend, "Monthly late-delivery rate")
-st.plotly_chart(fig_trend, use_container_width=True)
+st.plotly_chart(fig_trend, use_container_width=True, theme=None)
 
 st.divider()
 
@@ -216,8 +233,8 @@ fig_state = px.bar(
     labels={"n_orders": "Number of orders", "customer_state": "State"},
     hover_data=["total_revenue", "avg_order_value"],
 )
-style_fig(fig_state, "Top 15 states by order volume")
-st.plotly_chart(fig_state, use_container_width=True)
+style_fig(fig_state, "Top 15 states by order volume", bar_radius=True)
+st.plotly_chart(fig_state, use_container_width=True, theme=None)
 
 st.divider()
 
@@ -237,8 +254,8 @@ with col_p1:
         labels={"payment_type": "Payment type", "n_orders": "Orders"},
     )
     fig_pay.update_layout(showlegend=False)
-    style_fig(fig_pay, "Orders by payment type")
-    st.plotly_chart(fig_pay, use_container_width=True)
+    style_fig(fig_pay, "Orders by payment type", bar_radius=True)
+    st.plotly_chart(fig_pay, use_container_width=True, theme=None)
 
 with col_p2:
     inst_dist = metrics.installment_distribution(filtered_df)
@@ -253,8 +270,8 @@ with col_p2:
         labels={"installments": "Installments", "n_orders": "Orders"},
     )
     fig_inst.update_layout(showlegend=False)
-    style_fig(fig_inst, "Orders by installment count")
-    st.plotly_chart(fig_inst, use_container_width=True)
+    style_fig(fig_inst, "Orders by installment count", bar_radius=True)
+    st.plotly_chart(fig_inst, use_container_width=True, theme=None)
 
 st.divider()
 
@@ -292,9 +309,13 @@ elif dimension_label == "Month":
         color_discrete_sequence=[COLOR_BLUE],
         labels={dimension_col: dimension_label, "value": metric_label},
     )
+    fig_explore.update_traces(
+        line=dict(shape="spline", smoothing=0.6, width=2.5),
+        marker=dict(size=7, line=dict(width=1, color="#1a1a19")),
+    )
     fig_explore.update_layout(xaxis_tickangle=-45)
     style_fig(fig_explore, f"{metric_label} by {dimension_label.lower()}")
-    st.plotly_chart(fig_explore, use_container_width=True)
+    st.plotly_chart(fig_explore, use_container_width=True, theme=None)
 elif dimension_label == "State":
     ordered = explore_result.sort_values("value")
     fig_explore = px.bar(
@@ -306,8 +327,8 @@ elif dimension_label == "State":
         labels={dimension_col: dimension_label, "value": metric_label},
     )
     fig_explore.update_layout(height=max(400, 22 * len(ordered)))
-    style_fig(fig_explore, f"{metric_label} by {dimension_label.lower()}")
-    st.plotly_chart(fig_explore, use_container_width=True)
+    style_fig(fig_explore, f"{metric_label} by {dimension_label.lower()}", bar_radius=True)
+    st.plotly_chart(fig_explore, use_container_width=True, theme=None)
 else:
     category_orders = (
         {dimension_col: ORDERED_CATEGORIES[dimension_label]}
@@ -327,8 +348,8 @@ else:
         category_orders=category_orders,
         labels={dimension_col: dimension_label, "value": metric_label},
     )
-    style_fig(fig_explore, f"{metric_label} by {dimension_label.lower()}")
-    st.plotly_chart(fig_explore, use_container_width=True)
+    style_fig(fig_explore, f"{metric_label} by {dimension_label.lower()}", bar_radius=True)
+    st.plotly_chart(fig_explore, use_container_width=True, theme=None)
 
 if not explore_result.empty:
     with st.expander("View underlying table"):
