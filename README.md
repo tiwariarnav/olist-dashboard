@@ -8,7 +8,7 @@ Supporting angles covered in the dashboard: payment behavior (method + installme
 
 **[Live demo →](https://olist-delivery-analytics.streamlit.app)**
 
-<img width="1470" height="802" alt="Screenshot 2026-08-28 at 5 01 57 PM" src="https://github.com/user-attachments/assets/d9a24d65-08cf-454a-9392-a2eba7b442b8" />
+![Dashboard overview — KPI row, delay-by-review-score box plot, and repeat-purchase comparison](docs/screenshot-headliner.png)
 
 ## Key findings
 
@@ -41,7 +41,7 @@ Based on 96,470 delivered orders placed between September 2016 and October 2018:
 - **Filters**: order date range and customer state, applied across the whole page (repeat-purchase metrics intentionally use each customer's full order history rather than the date-filtered slice, since truncating it would misrepresent repeat behavior).
 - **Light/dark aware charts**, with a manual override in case Streamlit's automatic theme detection lags after switching (a known upstream issue).
 
-<img width="1202" height="801" alt="Screenshot 2026-08-28 at 5 07 51 PM" src="https://github.com/user-attachments/assets/51ec5262-d053-4a4c-961d-f8caac9fc592" />
+![Shipping-distance choropleth map and late-rate-by-distance-band chart](docs/screenshot-map.png)
 
 ## Dataset & methodology
 
@@ -69,6 +69,8 @@ Full ETL logic lives in `src/etl.py`; all KPI/aggregation logic lives in `src/me
 ### Limitations
 
 This is observational, not experimental, data — late deliveries aren't randomly assigned, so "late delivery correlates with lower review scores" is not the same claim as "late delivery causes lower review scores." Late orders could skew toward certain states, sellers, or product categories that independently affect satisfaction. The dashboard now includes an OLS regression of review score on late-delivery status, controlling for shipping distance, order value, payment type, and customer state (as fixed effects) all at once — the controlled effect (**-1.99 stars**) is nearly identical to the naive, uncontrolled one (**-2.02 stars**, both p < 0.000001, n = 95,347, R² = 0.157), which is evidence the relationship isn't just an artifact of late orders differing in these other ways. That said, it's still not a causal claim: `review_score` is ordinal (1-5), not truly continuous, so a stricter treatment would use ordinal logistic regression, and there could still be unobserved confounders (e.g. product category, seller quality) this model doesn't account for.
+
+![Regression results — naive vs. controlled effect of late delivery on review score](docs/screenshot-regression.png)
 
 ## Project structure
 
