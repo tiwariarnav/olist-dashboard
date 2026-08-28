@@ -107,14 +107,14 @@ Deployed on [Streamlit Community Cloud](https://streamlit.io/cloud) (free for pu
 
    ```bash
    git remote add origin https://github.com/<your-username>/olist-dashboard.git
-   git push -u origin master
+   git push -u origin main
    ```
 
 2. **Sign in to [share.streamlit.io](https://share.streamlit.io)** with your GitHub account.
 
 3. Click **"Create app"** → **"Deploy a public app from GitHub"**, then select:
    - **Repository**: `<your-username>/olist-dashboard`
-   - **Branch**: `master`
+   - **Branch**: `main`
    - **Main file path**: `src/app.py`
 
 4. Click **Deploy**. Streamlit Cloud installs `requirements.txt` and starts the app automatically. The pre-built `data/processed/olist_analysis_dataset.csv` is committed to this repo (see [Project structure](#project-structure)), so the app loads it directly and skips re-running the ETL step on Cloud.
