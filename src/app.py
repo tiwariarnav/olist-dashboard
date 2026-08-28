@@ -152,12 +152,26 @@ def style_fig(fig, title: str | None = None, bar_radius: bool = False):
     return fig
 
 
-@st.cache_data
-def get_data() -> pd.DataFrame:
-    """Load the processed dataset, building it from raw CSVs on first run if needed."""
+def _ensure_processed_dataset() -> float:
+    """Build the processed dataset from raw CSVs if it doesn't exist yet, and
+    return its current mtime. Called every rerun (cheap: just a stat() call
+    in the common case) so get_data() below can use the mtime as part of its
+    cache key."""
     if not metrics.PROCESSED_PATH.exists():
         raw_df = etl.build_analysis_dataset()
         etl.save_processed(raw_df)
+    return metrics.PROCESSED_PATH.stat().st_mtime
+
+
+@st.cache_data
+def get_data(_processed_mtime: float) -> pd.DataFrame:
+    """Load the processed dataset. st.cache_data keys on this function's own
+    code plus its arguments — it has no idea the function reads a CSV from
+    disk, so if that file changes (e.g. a new git deploy ships an updated
+    processed dataset) while this function's source stays the same, a stale
+    in-memory cache would otherwise keep serving the old data. Passing the
+    file's mtime in as an (otherwise-unused) argument makes a changed file
+    produce a new cache key, so a redeploy with updated data always reloads."""
     return metrics.load_processed()
 
 
@@ -170,7 +184,7 @@ def get_brazil_geojson() -> dict:
         return json.load(f)
 
 
-df = get_data()
+df = get_data(_ensure_processed_dataset())
 
 st.title("Olist E-Commerce: Delivery Delay, Reviews & Repeat Purchases")
 st.caption(
