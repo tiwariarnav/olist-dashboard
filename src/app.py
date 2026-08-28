@@ -99,13 +99,16 @@ st.sidebar.divider()
 def _detect_theme() -> str:
     """Best-effort auto-detection of the viewer's active Streamlit theme
     ('light' or 'dark'), used when the sidebar "Chart theme" control is set
-    to Auto. Falls back to 'dark' if st.context.theme isn't available, or
+    to Auto. Falls back to 'light' if st.context.theme isn't available, or
     hasn't updated yet — Streamlit has a known lag right after switching
-    themes (github.com/streamlit/streamlit/issues/11920)."""
+    themes, and on first script run (github.com/streamlit/streamlit/issues/11920).
+    'light' is the safer fallback since it's Streamlit's own default base
+    theme (no [theme] base is set in .streamlit/config.toml), so most first
+    page loads are actually light even when this detection call is unreliable."""
     try:
         return st.context.theme.type
     except Exception:
-        return "dark"
+        return "light"
 
 
 _THEME = _detect_theme() if chart_theme_choice == "Auto" else chart_theme_choice.lower()
