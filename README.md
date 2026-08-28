@@ -8,7 +8,7 @@ Supporting angles covered in the dashboard: payment behavior (method + installme
 
 **[Live demo →](https://olist-delivery-analytics.streamlit.app)**
 
-<img width="1470" height="802" alt="Screenshot 2026-08-28 at 1 59 50 PM" src="https://github.com/user-attachments/assets/90de07f4-d8d7-4332-a39a-14fec0417160" />
+<img width="1470" height="802" alt="Screenshot 2026-08-28 at 5 01 57 PM" src="https://github.com/user-attachments/assets/d9a24d65-08cf-454a-9392-a2eba7b442b8" />
 
 ## Key findings
 
