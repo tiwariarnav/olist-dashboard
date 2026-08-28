@@ -216,6 +216,106 @@ def distance_scatter_sample(df: pd.DataFrame, n: int = 4000, random_state: int =
     )
 
 
+PAYMENT_TYPE_LABELS_FOR_REGRESSION = {
+    "credit_card": "Credit Card",
+    "boleto": "Boleto",
+    "voucher": "Voucher",
+    "debit_card": "Debit Card",
+    "not_defined": "Not Defined",
+}
+
+
+def review_score_regression(df: pd.DataFrame) -> dict:
+    """OLS regression of review_score (1-5) on delivery lateness, controlling
+    for shipping distance, order value, payment type, and customer state
+    (included as fixed effects). Answers the question the rest of this
+    dashboard can only gesture at with raw averages: does a late delivery
+    still predict a lower review score once those confounders are held
+    constant, and by how much?
+
+    Coefficients are in review-score units — a coefficient of -1.0 on
+    "late delivery" means: comparing two orders with the same shipping
+    distance, order value, payment type, and state, the late one is
+    predicted to score 1.0 star lower on average.
+
+    Returns a dict with:
+      - "coefficients": DataFrame of the headline (non-state) terms —
+        variable, coefficient, p_value, ci_low, ci_high
+      - "naive_coefficient": the same "late delivery" effect WITHOUT any
+        controls, for direct comparison (does controlling for confounders
+        change the answer, or just confirm it?)
+      - "n_obs", "r_squared": model fit stats
+      - "reference_payment_type": the payment type used as the baseline
+        (its coefficient is folded into the intercept, so it isn't its own row)
+
+    Note: review_score is ordinal (1-5), not truly continuous, so OLS is a
+    simplification made for interpretability (coefficients read directly as
+    "stars") — a stricter treatment would use ordinal logistic regression.
+    """
+    import statsmodels.formula.api as smf
+
+    reg_df = df.loc[
+        df["is_delivered"]
+        & df["review_score"].notna()
+        & df["shipping_distance_km"].notna()
+        & df["order_value_total"].notna()
+        & df["primary_payment_type"].notna()
+        & df["customer_state"].notna()
+    ].copy()
+    reg_df["is_late_int"] = reg_df["is_late"].astype(int)
+    reg_df["distance_100km"] = reg_df["shipping_distance_km"] / 100
+    reg_df["order_value_100"] = reg_df["order_value_total"] / 100
+
+    formula = (
+        "review_score ~ is_late_int + distance_100km + order_value_100 "
+        "+ C(primary_payment_type) + C(customer_state)"
+    )
+    model = smf.ols(formula, data=reg_df).fit()
+    naive_model = smf.ols("review_score ~ is_late_int", data=reg_df).fit()
+
+    headline_terms = {
+        "is_late_int": "Late delivery",
+        "distance_100km": "Shipping distance (+100 km)",
+        "order_value_100": "Order value (+R$100)",
+    }
+    all_payment_types = sorted(reg_df["primary_payment_type"].dropna().unique())
+    for pt in all_payment_types:
+        term = f"C(primary_payment_type)[T.{pt}]"
+        if term in model.params.index:
+            label = PAYMENT_TYPE_LABELS_FOR_REGRESSION.get(pt, pt)
+            headline_terms[term] = f"Payment: {label}"
+    reference_payment_type = next(
+        (pt for pt in all_payment_types if f"C(primary_payment_type)[T.{pt}]" not in model.params.index),
+        all_payment_types[0] if all_payment_types else None,
+    )
+
+    conf_int = model.conf_int()
+    rows = []
+    for term, label in headline_terms.items():
+        rows.append(
+            {
+                "variable": label,
+                "coefficient": round(model.params[term], 4),
+                "p_value": round(model.pvalues[term], 6),
+                "ci_low": round(conf_int.loc[term, 0], 4),
+                "ci_high": round(conf_int.loc[term, 1], 4),
+                "significant": bool(model.pvalues[term] < 0.05),
+            }
+        )
+    coefficients = pd.DataFrame(rows)
+
+    return {
+        "coefficients": coefficients,
+        "naive_coefficient": round(naive_model.params["is_late_int"], 4),
+        "naive_p_value": round(naive_model.pvalues["is_late_int"], 6),
+        "n_obs": int(model.nobs),
+        "r_squared": round(model.rsquared, 4),
+        "reference_payment_type": PAYMENT_TYPE_LABELS_FOR_REGRESSION.get(
+            reference_payment_type, reference_payment_type
+        ),
+    }
+
+
 def late_rate_by_state(df: pd.DataFrame) -> pd.DataFrame:
     """Avg delivery delay and late-delivery rate by customer state, for the
     Brazil choropleth. Distinct from revenue_orders_by_state, which covers

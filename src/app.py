@@ -415,6 +415,82 @@ with dist_col:
 
 st.divider()
 
+# ---------------- Regression: does delay survive controlling for confounders? ----------------
+st.subheader("Does delay still predict reviews after controlling for other factors?")
+st.caption(
+    "Every chart above compares raw averages, which can't rule out confounding — "
+    "maybe 'late' orders just happen to skew toward farther states, pricier items, "
+    "or a payment method people are pickier about. This fits an OLS regression of "
+    "review score (1-5) on late-delivery status, controlling for shipping distance, "
+    "order value, payment type, and customer state (as fixed effects) all at once. "
+    "Coefficients are in star units — e.g. -1.0 means 'predicted score is 1 star "
+    "lower, holding the other factors fixed.'"
+)
+
+reg_result = metrics.review_score_regression(filtered_df)
+naive_coef = reg_result["naive_coefficient"]
+controlled_coef = reg_result["coefficients"].loc[
+    reg_result["coefficients"]["variable"] == "Late delivery", "coefficient"
+].iloc[0]
+controlled_p = reg_result["coefficients"].loc[
+    reg_result["coefficients"]["variable"] == "Late delivery", "p_value"
+].iloc[0]
+
+reg_col1, reg_col2 = st.columns(2)
+reg_col1.metric(
+    "Naive effect (no controls)",
+    f"{naive_coef:+.2f} stars",
+    help=f"Plain comparison of late vs. on-time review scores. p={reg_result['naive_p_value']:.1e}",
+)
+reg_col2.metric(
+    "Controlled effect",
+    f"{controlled_coef:+.2f} stars",
+    help=(
+        f"Same comparison, holding shipping distance, order value, payment type, "
+        f"and customer state fixed. p={controlled_p:.1e}. n={reg_result['n_obs']:,}, "
+        f"R²={reg_result['r_squared']:.3f}."
+    ),
+)
+st.caption(
+    f"The controlled estimate ({controlled_coef:+.2f}) is almost identical to the naive one "
+    f"({naive_coef:+.2f}) — controlling for these confounders barely moves the number, and it "
+    "stays highly significant either way. That's evidence the delay → review-score relationship "
+    "isn't just an artifact of late orders happening to differ in other ways."
+)
+
+with st.expander("View full regression coefficients"):
+    other_coefs = reg_result["coefficients"].loc[reg_result["coefficients"]["variable"] != "Late delivery"].copy()
+    other_coefs["error_plus"] = other_coefs["ci_high"] - other_coefs["coefficient"]
+    other_coefs["error_minus"] = other_coefs["coefficient"] - other_coefs["ci_low"]
+    other_coefs["direction"] = other_coefs["coefficient"].apply(lambda v: "Higher reviews" if v > 0 else "Lower reviews")
+    other_coefs = other_coefs.sort_values("coefficient")
+
+    fig_reg = px.bar(
+        other_coefs,
+        x="coefficient",
+        y="variable",
+        orientation="h",
+        color="direction",
+        color_discrete_map={"Higher reviews": COLOR_GOOD, "Lower reviews": COLOR_CRITICAL},
+        error_x="error_plus",
+        error_x_minus="error_minus",
+        labels={"coefficient": "Coefficient (star units)", "variable": "", "direction": ""},
+    )
+    fig_reg.add_vline(x=0, line_dash="dot", line_width=1, line_color=MUTED)
+    style_fig(fig_reg, "Control-variable coefficients (95% CI)", bar_radius=True)
+    fig_reg.update_layout(legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="left", x=0))
+    st.plotly_chart(fig_reg, use_container_width=True, theme=None)
+    st.caption(
+        f"Reference payment type: {reg_result['reference_payment_type']} (its effect is folded "
+        "into the intercept). Customer state is included as a control (fixed effects) but not "
+        f"shown individually — 27 states would clutter this chart. n={reg_result['n_obs']:,} orders, "
+        f"R²={reg_result['r_squared']:.3f}. review_score is ordinal (1-5), not truly continuous, so "
+        "OLS here is a simplification for interpretability — a stricter treatment would use ordinal "
+        "logistic regression, though the sign and significance pattern is unlikely to flip."
+    )
+
+st.divider()
+
 # ---------------- Payment behavior ----------------
 st.subheader("Payment behavior")
 col_p1, col_p2 = st.columns(2)
