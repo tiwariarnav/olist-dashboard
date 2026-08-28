@@ -17,9 +17,10 @@ env/
 # Jupyter
 .ipynb_checkpoints/
 
-# Data (raw + processed — keep the repo light; document how to get data in README)
+# Raw source data (large, CC BY-NC-SA licensed — see README for how to get it from Kaggle).
+# The processed/joined analysis dataset IS tracked (data/processed/) so the app and
+# Streamlit Cloud deployment work out of the box without needing the raw CSVs.
 data/olistcsvs/
-data/processed/
 
 # OS / editor
 .DS_Store
