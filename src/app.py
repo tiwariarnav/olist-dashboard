@@ -23,12 +23,22 @@ COLOR_CRITICAL = "#d03b3b"  # status: late / critical
 COLOR_BLUE = "#2a78d6"      # neutral magnitude (bar length already encodes value)
 MUTED = "#898781"
 
+# Raw column values are snake_case (Olist's source data); map to friendly
+# display labels wherever payment type is charted or tabled.
+PAYMENT_TYPE_LABELS = {
+    "credit_card": "Credit Card",
+    "boleto": "Boleto",
+    "voucher": "Voucher",
+    "debit_card": "Debit Card",
+    "not_defined": "Not Defined",
+}
+
 CATEGORICAL_MAP = {
-    "credit_card": "#2a78d6",
-    "boleto": "#eb6834",
-    "voucher": "#1baf7a",
-    "debit_card": "#eda100",
-    "not_defined": "#898781",
+    "Credit Card": "#2a78d6",
+    "Boleto": "#eb6834",
+    "Voucher": "#1baf7a",
+    "Debit Card": "#eda100",
+    "Not Defined": "#898781",
 }
 ORDINAL_BLUES_MAP = {
     "1": "#86b6ef",
@@ -81,8 +91,14 @@ def style_fig(fig, title: str | None = None, bar_radius: bool = False):
         title=dict(text=title, font=dict(color="#ffffff", size=16, family="'Inter', system-ui, -apple-system, sans-serif")) if title else None,
         margin=dict(l=40, r=20, t=55 if title else 20, b=40),
         hoverlabel=dict(bgcolor="#22221f", font_color="#ffffff", bordercolor="#3a3a37"),
-        xaxis=dict(gridcolor="#2c2c2a", zerolinecolor="#3a3a37", linecolor="#3a3a37", showline=True),
-        yaxis=dict(gridcolor="#2c2c2a", zerolinecolor="#3a3a37", linecolor="#3a3a37", showline=True),
+        xaxis=dict(
+            gridcolor="#2c2c2a", zerolinecolor="#3a3a37", linecolor="#3a3a37",
+            showline=True, automargin=True, title_standoff=12,
+        ),
+        yaxis=dict(
+            gridcolor="#2c2c2a", zerolinecolor="#3a3a37", linecolor="#3a3a37",
+            showline=True, automargin=True, title_standoff=12,
+        ),
     )
     if bar_radius:
         fig.update_traces(marker_cornerradius=4, selector=dict(type="bar"))
@@ -271,6 +287,7 @@ col_p1, col_p2 = st.columns(2)
 
 with col_p1:
     pay_dist = metrics.payment_type_distribution(filtered_df)
+    pay_dist["payment_type"] = pay_dist["payment_type"].map(PAYMENT_TYPE_LABELS).fillna(pay_dist["payment_type"])
     fig_pay = px.bar(
         pay_dist,
         x="payment_type",
@@ -319,6 +336,10 @@ with col_metric:
 
 dimension_col = metrics.EXPLORE_DIMENSIONS[dimension_label]
 explore_result = metrics.explore_by(explore_df, dimension_col, metric_label)
+if dimension_label == "Payment type":
+    explore_result[dimension_col] = (
+        explore_result[dimension_col].map(PAYMENT_TYPE_LABELS).fillna(explore_result[dimension_col])
+    )
 
 ORDERED_CATEGORIES = {
     "Review score": ["1", "2", "3", "4", "5"],
