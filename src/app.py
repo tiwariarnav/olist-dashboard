@@ -54,10 +54,10 @@ st.set_page_config(page_title="Olist Delivery & Review Analytics", layout="wide"
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
 
     html, body, [class*="css"] {
-        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+        font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
     }
 
     [data-testid="stMetricValue"] {
@@ -78,17 +78,33 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+chart_theme_choice = st.sidebar.selectbox(
+    "Chart theme",
+    options=["Auto", "Light", "Dark"],
+    index=0,
+    help=(
+        "Auto follows your Streamlit theme (⋮ menu → Settings → Theme), but "
+        "Streamlit has a known bug where it can briefly show the wrong colors "
+        "right after you switch it. Pick Light or Dark directly if a chart "
+        "title is hard to read."
+    ),
+)
+st.sidebar.divider()
+
 
 def _detect_theme() -> str:
-    """Best-effort detection of the viewer's active Streamlit theme
-    ('light' or 'dark') so charts can match it. Falls back to 'dark' (this
-    app's original, tested look) on Streamlit versions that don't expose
-    live theme info via st.context.theme."""
+    """Best-effort auto-detection of the viewer's active Streamlit theme
+    ('light' or 'dark'), used when the sidebar "Chart theme" control is set
+    to Auto. Falls back to 'dark' if st.context.theme isn't available, or
+    hasn't updated yet — Streamlit has a known lag right after switching
+    themes (github.com/streamlit/streamlit/issues/11920)."""
     try:
         return st.context.theme.type
     except Exception:
         return "dark"
 
+
+_THEME = _detect_theme() if chart_theme_choice == "Auto" else chart_theme_choice.lower()
 
 _CHART_TOKENS = {
     "light": dict(
@@ -100,7 +116,7 @@ _CHART_TOKENS = {
         axis_line="#383835", surface="#1a1a19",
     ),
 }
-CHART_COLORS = _CHART_TOKENS[_detect_theme()]
+CHART_COLORS = _CHART_TOKENS[_THEME]
 
 
 def style_fig(fig, title: str | None = None, bar_radius: bool = False):
@@ -111,10 +127,10 @@ def style_fig(fig, title: str | None = None, bar_radius: bool = False):
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color=CHART_COLORS["body"], size=13, family="'Inter', system-ui, -apple-system, sans-serif"),
+        font=dict(color=CHART_COLORS["body"], size=13, family="'Space Grotesk', system-ui, -apple-system, sans-serif"),
         title=dict(
             text=title,
-            font=dict(color=CHART_COLORS["title"], size=16, family="'Inter', system-ui, -apple-system, sans-serif"),
+            font=dict(color=CHART_COLORS["title"], size=16, family="'Space Grotesk', system-ui, -apple-system, sans-serif"),
         ) if title else None,
         margin=dict(l=40, r=20, t=55 if title else 20, b=40),
         hoverlabel=dict(bgcolor=CHART_COLORS["surface"], font_color=CHART_COLORS["title"], bordercolor=CHART_COLORS["axis_line"]),
