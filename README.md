@@ -26,6 +26,7 @@ Based on 96,470 delivered orders placed between September 2016 and October 2018:
 - **Most orders arrive early, not late.** The average delivery lands **11.9 days ahead of the estimated date** (median: 12 days early), and only **6.8%** of delivered orders (6,534 of 96,470) are late overall — but the late rate is not stable over time: it climbed from 1.2% in June 2018 to 6.2% in August 2018, the last full month in the dataset.
 - **Credit card dominates payment behavior**: 75.4% of orders use a credit card, followed by boleto (19.9%), voucher (3.2%), and debit card (1.5%).
 - **Order volume and revenue are heavily concentrated in São Paulo state** (SP: 41,746 orders, R$5.9M revenue) — more than 3x the next-highest state (RJ).
+- **Shipping distance is a real but modest factor.** Using geocoded customer/seller zip codes (great-circle distance), late-delivery rate roughly doubles moving from the nearest distance band (0-100km: 4.5% late) to the farthest (1500-2500km: 11.8% late) — but distance alone explains only a small slice of the variation (correlation ≈ +0.08). The bigger pattern is regional: North/Northeast states (Alagoas 21%, Maranhão 17%, Sergipe 15%) run 3-5x the late rate of the São-Paulo-adjacent South/Southeast (São Paulo 4.5%, Minas Gerais 4.6%, Paraná 4.0%), consistent with most sellers clustering near São Paulo. Rio de Janeiro is a notable exception — a 12% late rate despite sitting right next to São Paulo.
 
 *(All figures are reproducible from `data/processed/olist_analysis_dataset.csv` via the functions in `src/metrics.py`.)*
 
@@ -36,29 +37,37 @@ Based on 96,470 delivered orders placed between September 2016 and October 2018:
 - **Delivery performance over time**: monthly late-delivery rate trend.
 - **Order density & revenue by state**: top states by order volume, with revenue and average order value on hover.
 - **Payment behavior**: distribution by payment type and installment count.
+- **Shipping distance & geography**: a Brazil choropleth of late-delivery rate by state, plus a late-rate-by-distance-band chart, built from geocoded customer/seller zip codes.
 - **Explore**: pick any dimension (state, payment type, month, review score, delivery status) and any metric to build an ad-hoc chart — for questions the fixed charts above don't specifically answer.
 - **Filters**: order date range and customer state, applied across the whole page (repeat-purchase metrics intentionally use each customer's full order history rather than the date-filtered slice, since truncating it would misrepresent repeat behavior).
 - **Light/dark aware charts**, with a manual override in case Streamlit's automatic theme detection lags after switching (a known upstream issue).
 
 ## Dataset & methodology
 
-Five of the nine source tables are used, joined on `order_id` into a single order-level analysis dataset:
+Seven of the nine source tables are used, joined on `order_id` into a single order-level analysis dataset:
 
 | Table | Role |
 |---|---|
 | `olist_orders_dataset.csv` | Order status and the four timestamp fields delivery delay is computed from |
-| `olist_order_items_dataset.csv` | Item price + freight, aggregated to one row per order |
+| `olist_order_items_dataset.csv` | Item price + freight, aggregated to one row per order; also identifies each order's primary seller |
 | `olist_order_payments_dataset.csv` | Payment method(s) and installment count, aggregated to one row per order |
-| `olist_customers_dataset.csv` | Customer state and the stable `customer_unique_id` used for repeat-purchase analysis |
+| `olist_customers_dataset.csv` | Customer state/zip and the stable `customer_unique_id` used for repeat-purchase analysis |
 | `olist_order_reviews_dataset.csv` | Review score (most recent, if an order has more than one) |
+| `olist_sellers_dataset.csv` | Primary seller's zip code, for the shipping-distance calculation |
+| `olist_geolocation_dataset.csv` | Lat/lng by zip-code prefix, used to geocode both customer and seller and compute distance |
 
 Key derived fields:
 
 - `delivery_delay_days` — actual delivery date minus estimated delivery date (negative = early), defined only for delivered orders.
 - `is_late` — `delivery_delay_days > 0`.
+- `shipping_distance_km` — great-circle (haversine) distance between the customer's and primary seller's geocoded zip-code prefixes. Resolved for ~98.7% of orders; the rest have a zip prefix absent from the geolocation table.
 - Repeat-purchase rate is measured on `customer_unique_id` (stable across orders), not `customer_id` (unique per order in this dataset).
 
 Full ETL logic lives in `src/etl.py`; all KPI/aggregation logic lives in `src/metrics.py`. Both are plain pandas functions, independent of Streamlit, so they can be tested or reused outside the dashboard.
+
+### Limitations
+
+This is observational, not experimental, data — late deliveries aren't randomly assigned, so "late delivery correlates with lower review scores" is not the same claim as "late delivery causes lower review scores." Late orders could skew toward certain states, sellers, or product categories that independently affect satisfaction. The shipping-distance analysis is a first step at unpacking this (distance is a real but modest factor — correlation ≈ +0.08 with late-delivery rate — so most of the variation in delay isn't explained by distance alone), but a fuller treatment would control for order value, seller, and category simultaneously (e.g. a logistic regression on review outcome) before treating the relationship as causal.
 
 ## Project structure
 
@@ -70,7 +79,8 @@ olist-dashboard/
 │   └── app.py          # Streamlit dashboard
 ├── data/
 │   ├── olistcsvs/      # raw Kaggle CSVs (not tracked in git — see below)
-│   └── processed/       # built analysis dataset (tracked in git, so the app runs out of the box)
+│   ├── processed/       # built analysis dataset (tracked in git, so the app runs out of the box)
+│   └── br_states.geojson # Brazil state boundaries, for the choropleth map
 ├── requirements.txt
 └── .streamlit/config.toml   # theme accent color
 ```
