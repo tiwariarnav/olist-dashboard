@@ -170,6 +170,72 @@ def installment_distribution(df: pd.DataFrame) -> pd.DataFrame:
 
 
 # ---------------------------------------------------------------------------
+# Shipping distance: does the customer-seller distance explain delay, beyond
+# what state alone shows? Uses shipping_distance_km, computed in etl.py from
+# geocoded customer/primary-seller zip prefixes (olist_geolocation_dataset).
+# ---------------------------------------------------------------------------
+
+DISTANCE_BUCKET_BINS = [0, 100, 300, 600, 1000, 1500, 2500, float("inf")]
+DISTANCE_BUCKET_LABELS = ["0-100", "100-300", "300-600", "600-1000", "1000-1500", "1500-2500", "2500+"]
+
+
+def delay_by_distance_bucket(df: pd.DataFrame) -> pd.DataFrame:
+    """Avg delivery delay and late-delivery rate, bucketed by shipping
+    distance (km) between customer and primary seller. Only delivered orders
+    with a resolvable distance (both zip prefixes geocoded) are included —
+    about 1.3% of orders lack a match and are dropped here."""
+    delivered = df.loc[df["is_delivered"] & df["shipping_distance_km"].notna()].copy()
+    delivered["distance_bucket"] = pd.cut(
+        delivered["shipping_distance_km"], bins=DISTANCE_BUCKET_BINS, labels=DISTANCE_BUCKET_LABELS
+    )
+    summary = (
+        delivered.groupby("distance_bucket", observed=True)
+        .agg(
+            avg_delay_days=("delivery_delay_days", "mean"),
+            late_rate_pct=("is_late", lambda s: 100 * s.mean()),
+            n_orders=("order_id", "count"),
+        )
+        .round(2)
+        .reset_index()
+    )
+    # groupby on a categorical preserves bucket order already; just make sure
+    # empty buckets (possible on a heavily filtered slice) don't break the chart
+    summary = summary[summary["n_orders"] > 0].reset_index(drop=True)
+    return summary
+
+
+def distance_scatter_sample(df: pd.DataFrame, n: int = 4000, random_state: int = 42) -> pd.DataFrame:
+    """A random sample of delivered orders with distance + delay, sized for a
+    responsive scatter plot (the full ~98K points render fine with WebGL but
+    a sample keeps the chart snappy and no less informative at this scale)."""
+    delivered = df.loc[df["is_delivered"] & df["shipping_distance_km"].notna()]
+    if len(delivered) <= n:
+        return delivered[["shipping_distance_km", "delivery_delay_days", "is_late"]].copy()
+    return delivered[["shipping_distance_km", "delivery_delay_days", "is_late"]].sample(
+        n=n, random_state=random_state
+    )
+
+
+def late_rate_by_state(df: pd.DataFrame) -> pd.DataFrame:
+    """Avg delivery delay and late-delivery rate by customer state, for the
+    Brazil choropleth. Distinct from revenue_orders_by_state, which covers
+    volume/revenue rather than delivery performance."""
+    delivered = df.loc[df["is_delivered"]]
+    summary = (
+        delivered.groupby("customer_state")
+        .agg(
+            avg_delay_days=("delivery_delay_days", "mean"),
+            late_rate_pct=("is_late", lambda s: 100 * s.mean()),
+            n_orders=("order_id", "count"),
+        )
+        .round(2)
+        .reset_index()
+        .rename(columns={"customer_state": "state"})
+    )
+    return summary
+
+
+# ---------------------------------------------------------------------------
 # Explore tab: generic dimension x metric aggregation, for open-ended
 # questions the fixed dashboard charts don't specifically answer.
 # ---------------------------------------------------------------------------
@@ -261,3 +327,9 @@ if __name__ == "__main__":
 
     print("\n=== installment_distribution ===")
     print(installment_distribution(df))
+
+    print("\n=== delay_by_distance_bucket ===")
+    print(delay_by_distance_bucket(df))
+
+    print("\n=== late_rate_by_state (top 5 by n_orders) ===")
+    print(late_rate_by_state(df).sort_values("n_orders", ascending=False).head())
