@@ -18,9 +18,8 @@ env/
 .ipynb_checkpoints/
 
 # Data (raw + processed — keep the repo light; document how to get data in README)
-data/*.csv
-data/processed/*.csv
-data/processed/*.parquet
+data/olistcsvs/
+data/processed/
 
 # OS / editor
 .DS_Store
