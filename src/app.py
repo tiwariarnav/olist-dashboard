@@ -79,24 +79,51 @@ st.markdown(
 )
 
 
+def _detect_theme() -> str:
+    """Best-effort detection of the viewer's active Streamlit theme
+    ('light' or 'dark') so charts can match it. Falls back to 'dark' (this
+    app's original, tested look) on Streamlit versions that don't expose
+    live theme info via st.context.theme."""
+    try:
+        return st.context.theme.type
+    except Exception:
+        return "dark"
+
+
+_CHART_TOKENS = {
+    "light": dict(
+        title="#0b0b0b", body="#52514e", gridline="#e1e0d9",
+        axis_line="#c3c2b7", surface="#fcfcfb",
+    ),
+    "dark": dict(
+        title="#ffffff", body="#c3c2b7", gridline="#2c2c2a",
+        axis_line="#383835", surface="#1a1a19",
+    ),
+}
+CHART_COLORS = _CHART_TOKENS[_detect_theme()]
+
+
 def style_fig(fig, title: str | None = None, bar_radius: bool = False):
-    """Shared chart chrome tuned for Streamlit's dark theme: transparent
-    background so charts blend into the page instead of sitting in a
-    mismatched light card, soft muted gridlines instead of harsh default
-    ones, and (optionally) rounded bar corners for a less "sharp" look."""
+    """Shared chart chrome that adapts to the viewer's light/dark theme:
+    transparent background so charts blend into the page, muted gridlines
+    matched to the active mode, and (optionally) rounded bar corners for a
+    less "sharp" look."""
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#c3c2b7", size=13, family="'Inter', system-ui, -apple-system, sans-serif"),
-        title=dict(text=title, font=dict(color="#ffffff", size=16, family="'Inter', system-ui, -apple-system, sans-serif")) if title else None,
+        font=dict(color=CHART_COLORS["body"], size=13, family="'Inter', system-ui, -apple-system, sans-serif"),
+        title=dict(
+            text=title,
+            font=dict(color=CHART_COLORS["title"], size=16, family="'Inter', system-ui, -apple-system, sans-serif"),
+        ) if title else None,
         margin=dict(l=40, r=20, t=55 if title else 20, b=40),
-        hoverlabel=dict(bgcolor="#22221f", font_color="#ffffff", bordercolor="#3a3a37"),
+        hoverlabel=dict(bgcolor=CHART_COLORS["surface"], font_color=CHART_COLORS["title"], bordercolor=CHART_COLORS["axis_line"]),
         xaxis=dict(
-            gridcolor="#2c2c2a", zerolinecolor="#3a3a37", linecolor="#3a3a37",
+            gridcolor=CHART_COLORS["gridline"], zerolinecolor=CHART_COLORS["axis_line"], linecolor=CHART_COLORS["axis_line"],
             showline=True, automargin=True, title_standoff=12,
         ),
         yaxis=dict(
-            gridcolor="#2c2c2a", zerolinecolor="#3a3a37", linecolor="#3a3a37",
+            gridcolor=CHART_COLORS["gridline"], zerolinecolor=CHART_COLORS["axis_line"], linecolor=CHART_COLORS["axis_line"],
             showline=True, automargin=True, title_standoff=12,
         ),
     )
@@ -256,7 +283,7 @@ fig_trend = px.line(
 )
 fig_trend.update_traces(
     line=dict(shape="spline", smoothing=0.6, width=2.5),
-    marker=dict(size=7, line=dict(width=1, color="#1a1a19")),
+    marker=dict(size=7, line=dict(width=1, color=CHART_COLORS["surface"])),
 )
 fig_trend.update_layout(xaxis_tickangle=-45)
 style_fig(fig_trend, "Monthly late-delivery rate")
@@ -320,7 +347,7 @@ with col_p2:
 st.divider()
 
 # ---------------- Explore: open-ended dimension x metric ----------------
-st.subheader("Explore your own question")
+st.subheader("Explore")
 st.caption(
     "Pick a dimension and a metric to build a chart from the filtered data above — "
     "for questions the fixed charts on this page don't specifically answer."
@@ -359,7 +386,7 @@ elif dimension_label == "Month":
     )
     fig_explore.update_traces(
         line=dict(shape="spline", smoothing=0.6, width=2.5),
-        marker=dict(size=7, line=dict(width=1, color="#1a1a19")),
+        marker=dict(size=7, line=dict(width=1, color=CHART_COLORS["surface"])),
     )
     fig_explore.update_layout(xaxis_tickangle=-45)
     style_fig(fig_explore, f"{metric_label} by {dimension_label.lower()}")
