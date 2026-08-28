@@ -54,10 +54,10 @@ st.set_page_config(page_title="Olist Delivery & Review Analytics", layout="wide"
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Sora:wght@400;500;600;700;800&display=swap');
 
     html, body, [class*="css"] {
-        font-family: 'Space Grotesk', system-ui, -apple-system, sans-serif;
+        font-family: 'Sora', system-ui, -apple-system, sans-serif;
     }
 
     [data-testid="stMetricValue"] {
@@ -127,10 +127,10 @@ def style_fig(fig, title: str | None = None, bar_radius: bool = False):
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color=CHART_COLORS["body"], size=13, family="'Space Grotesk', system-ui, -apple-system, sans-serif"),
+        font=dict(color=CHART_COLORS["body"], size=13, family="'Sora', system-ui, -apple-system, sans-serif"),
         title=dict(
             text=title,
-            font=dict(color=CHART_COLORS["title"], size=16, family="'Space Grotesk', system-ui, -apple-system, sans-serif"),
+            font=dict(color=CHART_COLORS["title"], size=16, family="'Sora', system-ui, -apple-system, sans-serif"),
         ) if title else None,
         margin=dict(l=40, r=20, t=55 if title else 20, b=40),
         hoverlabel=dict(bgcolor=CHART_COLORS["surface"], font_color=CHART_COLORS["title"], bordercolor=CHART_COLORS["axis_line"]),
