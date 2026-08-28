@@ -41,6 +41,33 @@ ORDINAL_BLUES_MAP = {
 
 st.set_page_config(page_title="Olist Delivery & Review Analytics", layout="wide")
 
+st.markdown(
+    """
+    <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
+
+    html, body, [class*="css"] {
+        font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    }
+
+    [data-testid="stMetricValue"] {
+        font-weight: 600;
+        letter-spacing: -0.02em;
+    }
+
+    [data-testid="stMetricLabel"] {
+        font-weight: 500;
+    }
+
+    h1, h2, h3 {
+        font-weight: 700;
+        letter-spacing: -0.01em;
+    }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
+
 
 def style_fig(fig, title: str | None = None, bar_radius: bool = False):
     """Shared chart chrome tuned for Streamlit's dark theme: transparent
@@ -50,8 +77,8 @@ def style_fig(fig, title: str | None = None, bar_radius: bool = False):
     fig.update_layout(
         paper_bgcolor="rgba(0,0,0,0)",
         plot_bgcolor="rgba(0,0,0,0)",
-        font=dict(color="#c3c2b7", size=13, family="system-ui, -apple-system, 'Segoe UI', sans-serif"),
-        title=dict(text=title, font=dict(color="#ffffff", size=16)) if title else None,
+        font=dict(color="#c3c2b7", size=13, family="'Inter', system-ui, -apple-system, sans-serif"),
+        title=dict(text=title, font=dict(color="#ffffff", size=16, family="'Inter', system-ui, -apple-system, sans-serif")) if title else None,
         margin=dict(l=40, r=20, t=55 if title else 20, b=40),
         hoverlabel=dict(bgcolor="#22221f", font_color="#ffffff", bordercolor="#3a3a37"),
         xaxis=dict(gridcolor="#2c2c2a", zerolinecolor="#3a3a37", linecolor="#3a3a37", showline=True),
