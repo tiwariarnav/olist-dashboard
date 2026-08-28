@@ -41,6 +41,8 @@ Based on 96,470 delivered orders placed between September 2016 and October 2018:
 - **Filters**: order date range and customer state, applied across the whole page (repeat-purchase metrics intentionally use each customer's full order history rather than the date-filtered slice, since truncating it would misrepresent repeat behavior).
 - **Light/dark aware charts**, with a manual override in case Streamlit's automatic theme detection lags after switching (a known upstream issue).
 
+<img width="1202" height="801" alt="Screenshot 2026-08-28 at 5 07 51 PM" src="https://github.com/user-attachments/assets/51ec5262-d053-4a4c-961d-f8caac9fc592" />
+
 ## Dataset & methodology
 
 Seven of the nine source tables are used, joined on `order_id` into a single order-level analysis dataset:
