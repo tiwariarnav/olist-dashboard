@@ -258,5 +258,86 @@ with col_p2:
 
 st.divider()
 
+# ---------------- Explore: open-ended dimension x metric ----------------
+st.subheader("Explore your own question")
+st.caption(
+    "Pick a dimension and a metric to build a chart from the filtered data above — "
+    "for questions the fixed charts on this page don't specifically answer."
+)
+
+explore_df = metrics.prepare_explore_columns(filtered_df)
+
+col_dim, col_metric = st.columns(2)
+with col_dim:
+    dimension_label = st.selectbox("Break down by", list(metrics.EXPLORE_DIMENSIONS.keys()))
+with col_metric:
+    metric_label = st.selectbox("Measure", metrics.EXPLORE_METRICS)
+
+dimension_col = metrics.EXPLORE_DIMENSIONS[dimension_label]
+explore_result = metrics.explore_by(explore_df, dimension_col, metric_label)
+
+ORDERED_CATEGORIES = {
+    "Review score": ["1", "2", "3", "4", "5"],
+    "Delivery status": ["On-time", "Late"],
+}
+
+if explore_result.empty:
+    st.info("No data available for this combination with the current filters.")
+elif dimension_label == "Month":
+    fig_explore = px.line(
+        explore_result.sort_values(dimension_col),
+        x=dimension_col,
+        y="value",
+        markers=True,
+        color_discrete_sequence=[COLOR_BLUE],
+        labels={dimension_col: dimension_label, "value": metric_label},
+    )
+    fig_explore.update_layout(xaxis_tickangle=-45)
+    style_fig(fig_explore, f"{metric_label} by {dimension_label.lower()}")
+    st.plotly_chart(fig_explore, use_container_width=True)
+elif dimension_label == "State":
+    ordered = explore_result.sort_values("value")
+    fig_explore = px.bar(
+        ordered,
+        x="value",
+        y=dimension_col,
+        orientation="h",
+        color_discrete_sequence=[COLOR_BLUE],
+        labels={dimension_col: dimension_label, "value": metric_label},
+    )
+    fig_explore.update_layout(height=max(400, 22 * len(ordered)))
+    style_fig(fig_explore, f"{metric_label} by {dimension_label.lower()}")
+    st.plotly_chart(fig_explore, use_container_width=True)
+else:
+    category_orders = (
+        {dimension_col: ORDERED_CATEGORIES[dimension_label]}
+        if dimension_label in ORDERED_CATEGORIES
+        else {}
+    )
+    ordered = (
+        explore_result
+        if dimension_label in ORDERED_CATEGORIES
+        else explore_result.sort_values("value", ascending=False)
+    )
+    fig_explore = px.bar(
+        ordered,
+        x=dimension_col,
+        y="value",
+        color_discrete_sequence=[COLOR_BLUE],
+        category_orders=category_orders,
+        labels={dimension_col: dimension_label, "value": metric_label},
+    )
+    style_fig(fig_explore, f"{metric_label} by {dimension_label.lower()}")
+    st.plotly_chart(fig_explore, use_container_width=True)
+
+if not explore_result.empty:
+    with st.expander("View underlying table"):
+        st.dataframe(
+            explore_result.rename(columns={dimension_col: dimension_label, "value": metric_label}),
+            use_container_width=True,
+        )
+
+st.divider()
+
 with st.expander(f"View filtered raw data ({len(filtered_df):,} orders)"):
     st.dataframe(filtered_df, use_container_width=True)

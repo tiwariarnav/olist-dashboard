@@ -169,6 +169,69 @@ def installment_distribution(df: pd.DataFrame) -> pd.DataFrame:
     return summary
 
 
+# ---------------------------------------------------------------------------
+# Explore tab: generic dimension x metric aggregation, for open-ended
+# questions the fixed dashboard charts don't specifically answer.
+# ---------------------------------------------------------------------------
+
+EXPLORE_DIMENSIONS = {
+    "State": "customer_state",
+    "Payment type": "primary_payment_type",
+    "Month": "order_year_month",
+    "Review score": "_review_score_str",
+    "Delivery status": "_delivery_status_str",
+}
+
+EXPLORE_METRICS = [
+    "Number of orders",
+    "Total revenue (R$)",
+    "Avg order value (R$)",
+    "Avg delivery delay (days)",
+    "Avg review score",
+    "Late delivery rate (%)",
+]
+
+
+def prepare_explore_columns(df: pd.DataFrame) -> pd.DataFrame:
+    """Add the small set of derived string columns the Explore tab groups by."""
+    df = df.copy()
+    df["_review_score_str"] = df["review_score"].apply(lambda x: str(int(x)) if pd.notna(x) else pd.NA)
+    df["_delivery_status_str"] = df["is_late"].map({True: "Late", False: "On-time"})
+    df.loc[~df["is_delivered"], "_delivery_status_str"] = pd.NA
+    return df
+
+
+def explore_by(df: pd.DataFrame, dimension_col: str, metric: str) -> pd.DataFrame:
+    """
+    Generic dimension x metric aggregation for the Explore tab. df must already
+    have the derived columns from prepare_explore_columns(). Returns a tidy
+    DataFrame with columns [dimension_col, "value", "n_orders"].
+    """
+    if metric == "Number of orders":
+        g = df.groupby(dimension_col)["order_id"].nunique()
+    elif metric == "Total revenue (R$)":
+        g = df.groupby(dimension_col)["order_value_total"].sum().round(2)
+    elif metric == "Avg order value (R$)":
+        g = df.groupby(dimension_col)["order_value_total"].mean().round(2)
+    elif metric == "Avg delivery delay (days)":
+        g = df.loc[df["is_delivered"]].groupby(dimension_col)["delivery_delay_days"].mean().round(2)
+    elif metric == "Avg review score":
+        g = df.loc[df["review_score"].notna()].groupby(dimension_col)["review_score"].mean().round(3)
+    elif metric == "Late delivery rate (%)":
+        g = df.loc[df["is_delivered"]].groupby(dimension_col)["is_late"].mean().mul(100).round(2)
+    else:
+        raise ValueError(f"Unknown metric: {metric}")
+
+    n_orders = df.groupby(dimension_col)["order_id"].nunique()
+
+    result = (
+        pd.concat([g.rename("value"), n_orders.rename("n_orders")], axis=1)
+        .dropna(subset=["value"])
+        .reset_index()
+    )
+    return result
+
+
 if __name__ == "__main__":
     df = load_processed()
 
